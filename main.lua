@@ -10,7 +10,10 @@ local TextLabel_3 = Instance.new("TextLabel")
 local PlaceIdBox = Instance.new("TextBox")
 local StartButton = Instance.new("TextButton")
 local HttpService = game:GetService("HttpService")
-
+local EAsy = Instance.new("UICorner")
+local EasyV2 = Instance.new("UICorner")
+EasyV2.Parent = Frame
+EAsy.Parent = TextLabel
 StreamSnipe.Name = HttpService:GenerateGUID(false)
 StreamSnipe.Parent = game:GetService("CoreGui")
 
@@ -24,8 +27,8 @@ Frame.Draggable = true
 
 TextLabel.Parent = Frame
 TextLabel.Active = true
-TextLabel.BackgroundColor3 = Color3.new(1, 0.666667, 0)
-TextLabel.BorderColor3 = Color3.new(0.121569, 0.121569, 0.160784)
+TextLabel.BackgroundColor3 = Color3.new(1.000000, 0.000000, 0.000000)
+TextLabel.BorderColor3 = Color3.new(0.000000, 0.000000, 0.000000)
 TextLabel.Size = UDim2.new(0, 400, 0, 40)
 TextLabel.Font = Enum.Font.SourceSansLight
 TextLabel.Text = "Synapse X Stream Sniper"
