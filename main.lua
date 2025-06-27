@@ -29,8 +29,8 @@ Frame.Draggable = true
 
 TextLabel.Parent = Frame
 TextLabel.Active = true
-TextLabel.BackgroundColor3 = Color3.new(1.000000, 0.000000, 0.000000)
-TextLabel.BorderColor3 = Color3.new(0.000000, 0.000000, 0.000000)
+TextLabel.BackgroundColor3 = Color3.new(1, 0, 0)
+TextLabel.BorderColor3 = Color3.new(0, 0, 0)
 TextLabel.Size = UDim2.new(0, 400, 0, 40)
 TextLabel.Font = Enum.Font.SourceSansLight
 TextLabel.Text = "Synapse X Stream Sniper"
@@ -99,79 +99,90 @@ local Debounce = false
 local Kill = false
 
 local function HttpGet(url)
-	return HttpService:JSONDecode(htgetf(url))
+    local response = game:HttpGet(url)
+    return HttpService:JSONDecode(response)
 end
 
 local function Status(text, tout)
-	StartButton.Text = text
-	if tout then
-		spawn(function()
-			wait(tout)
-			StartButton.Text = "Start"
-		end)
-	end
+    StartButton.Text = text
+    if tout then
+        spawn(function()
+            wait(tout)
+            StartButton.Text = "Start"
+        end)
+    end
 end
 
 StartButton.MouseButton1Click:Connect(function()
-	if Debounce then
-		Kill = true
-		Debounce = false
-		return
-	end
-	
-	Debounce = true
-	
-	local PlaceId = PlaceIdBox.Text
-	Status("Stage 1...")
-	
-	local Suc, UserId = pcall(function()
-		if tonumber(UsernameBox.Text) then
-			return tonumber(UsernameBox.Text)
-		end
-		
-		return game:GetService("Players"):GetUserIdFromNameAsync(UsernameBox.Text)
-	end)
-	
-	if not Suc then
-		return Status("Username does not exist!", 3)
-	end
-	
-	Status("Stage 2..")
-	
-	local Thumbnail = HttpGet("https://www.roblox.com/headshot-thumbnail/json?userId=" .. UserId .. "&width=48&height=48").Url
-	
-	Status("Stage 3...")
-	
-	local Index = 0
-	while true do
-		local GameInstances = HttpGet("https://www.roblox.com/games/getgameinstancesjson?placeId=" .. PlaceId .. "&startindex=" .. Index)
-		for I,V in pairs(GameInstances.Collection) do
-			for I2,V2 in pairs(V.CurrentPlayers) do
-				if V2.Id == UserId or V2.Thumbnail.Url == Thumbnail then
-					Status("Complete!")
-					game:GetService("TeleportService"):TeleportToPlaceInstance(tonumber(PlaceId), V.Guid)
-					local FailCounter = 0
-					game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
-						if State == Enum.TeleportState.Failed then
-							FailCounter = FailCounter + 1
-							Status("Failed to teleport. (retry " .. tostring(FailCounter) .. ")")
-							game:GetService("TeleportService"):TeleportToPlaceInstance(tonumber(PlaceId), V.Guid)
-						end
-					end)
-					return
-				end
-			end
-		end
-		Status("Stage 3 (" .. tostring(Index) .. "/" .. tostring(GameInstances.TotalCollectionSize) .. " servers scanned)...")
-		if Index > GameInstances.TotalCollectionSize then
-			return Status("Failed to get game! (VIP server?)", 3)
-		end
-		if Kill then
-			Kill = false
-			Debounce = false
-			Status("Cancelled.", 3)
-			return
-		end
-		Index = Index + 10
-	end
+    if Debounce then
+        Kill = true
+        Debounce = false
+        return
+    end
+
+    Debounce = true
+    local PlaceId = PlaceIdBox.Text
+    Status("Stage 1...")
+
+    local Suc, UserId = pcall(function()
+        if tonumber(UsernameBox.Text) then
+            return tonumber(UsernameBox.Text)
+        end
+        return game:GetService("Players"):GetUserIdFromNameAsync(UsernameBox.Text)
+    end)
+
+    if not Suc then
+        return Status("Username does not exist!", 3)
+    end
+
+    Status("Stage 2...")
+
+    local thumbnailResponse = HttpGet("https://thumbnails.roblox.com/v1/headshot?userIds=" .. UserId .. "&size=48x48&format=Png&isCircular=false")
+    local thumbnailData = thumbnailResponse.data and thumbnailResponse.data[1]
+    local Thumbnail = thumbnailData and thumbnailData.imageUrl or ""
+
+    Status("Stage 3...")
+
+    local Cursor = ""
+    while true do
+        local url = string.format("https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=10&cursor=%s", PlaceId, Cursor)
+        local response = HttpGet(url)
+
+        if not response or not response.data then
+            return Status("Failed to get game! (API issue)", 3)
+        end
+
+        for _, server in pairs(response.data) do
+            for _, player in pairs(server.players) do
+                if player.id == UserId then
+                    Status("Complete!")
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(tonumber(PlaceId), server.id)
+                    local FailCounter = 0
+                    game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
+                        if State == Enum.TeleportState.Failed then
+                            FailCounter = FailCounter + 1
+                            Status("Failed to teleport. (retry " .. tostring(FailCounter) .. ")")
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(tonumber(PlaceId), server.id)
+                        end
+                    end)
+                    return
+                end
+            end
+        end
+
+        Status("Stage 3 (scanning servers)...")
+
+        if not response.nextPageCursor or response.nextPageCursor == "" then
+            return Status("Failed to find player!", 3)
+        end
+
+        if Kill then
+            Kill = false
+            Debounce = false
+            Status("Cancelled.", 3)
+            return
+        end
+
+        Cursor = response.nextPageCursor
+    end
 end)
