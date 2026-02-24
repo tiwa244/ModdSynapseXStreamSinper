@@ -1,5 +1,4 @@
 local fake = function() return 'asd' end
-if not is_synapse_function(fake) then while true do end end
 
 local StreamSnipe = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
