@@ -1,5 +1,3 @@
-local fake = function() return 'asd' end
-
 local StreamSnipe = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local TextLabel = Instance.new("TextLabel")
